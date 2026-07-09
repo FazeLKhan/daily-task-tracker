@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Task Tracker - Team Dashboard</title>
+<style>
+  :root { --bg:#f3f4f6; --card:#fff; --text:#1f2937; --muted:#6b7280; --accent:#2563eb; --success:#059669; --warning:#d97706; --danger:#dc2626; --border:#e5e7eb; }
+  * { box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI',system-ui,sans-serif; }
+  body { background:var(--bg); color:var(--text); }
+  .layout { display:flex; height:100vh; }
+  .sidebar { width:240px; background:#111827; color:#fff; padding:20px 0; flex-shrink:0; overflow-y:auto; }
+  .sidebar-title { padding:0 20px 16px; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#9ca3af; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:12px 20px; cursor:pointer; font-size:14px; transition:all .15s; border-left:3px solid transparent; }
+  .nav-item:hover { background:#1f2937; }
+  .nav-item.active { background:#1f2937; border-left-color:var(--accent); color:#fff; }
+  .nav-item.locked { opacity:0.5; cursor:not-allowed; }
+  .nav-item.locked:hover { background:transparent; }
+  .nav-icon { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; }
+  .lock-icon { font-size:10px; margin-left:auto; color:#9ca3af; }
+  .main { flex:1; overflow-y:auto; padding:24px; }
+  .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+  .header h2 { font-size:22px; }
+  .btn { padding:8px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:600; font-size:13px; transition:all .15s; }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { background:#1d4ed8; }
+  .btn-sm { padding:6px 12px; font-size:12px; }
+  .btn-ghost { background:transparent; color:var(--muted); }
+  .btn-ghost:hover { background:#f3f4f6; color:var(--text); }
+  .btn-edit { background:#dbeafe; color:#1d4ed8; }
+  .btn-edit:hover { background:#bfdbfe; }
+  .btn-danger { background:#fee2e2; color:#991b1b; }
+  .btn-danger:hover { background:#fecaca; }
+  .grid-4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:20px; }
+  .card { background:var(--card); border-radius:12px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,.08); border:1px solid var(--border); }
+  .card-title { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+  .card-value { font-size:28px; font-weight:700; }
+  .card-sub { font-size:12px; color:var(--muted); margin-top:4px; }
+  .section-title { font-size:16px; font-weight:600; margin:20px 0 12px; }
+  .table-wrap { background:var(--card); border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); border:1px solid var(--border); overflow:hidden; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { background:#f9fafb; padding:10px 14px; text-align:left; font-weight:600; color:var(--muted); font-size:11px; text-transform:uppercase; border-bottom:1px solid var(--border); }
+  td { padding:10px 14px; border-bottom:1px solid var(--border); }
+  tr:hover td { background:#f9fafb; }
+  .status { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .status-done { background:#d1fae5; color:#065f46; }
+  .status-pending { background:#fef3c7; color:#92400e; }
+  .status-overdue { background:#fee2e2; color:#991b1b; }
+  .member-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+  .member-card { background:var(--card); border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); border:1px solid var(--border); cursor:pointer; transition:all .15s; }
+  .member-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.1); }
+  .member-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:#fff; }
+  .progress-bar { height:6px; background:#e5e7eb; border-radius:3px; overflow:hidden; margin:8px 0; }
+  .progress-fill { height:100%; border-radius:3px; transition:width .4s ease; }
+  .stats-row { display:flex; justify-content:space-between; margin-top:8px; font-size:12px; }
+  .stat-box { text-align:center; }
+  .stat-num { font-weight:700; font-size:15px; }
+  .stat-label { color:var(--muted); font-size:10px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:600; margin-left:4px; }
+  .badge-gold { background:#fef3c7; color:#92400e; }
+  .badge-green { background:#d1fae5; color:#065f46; }
+  .badge-red { background:#fee2e2; color:#991b1b; }
+  .badge-you { background:#dbeafe; color:#1d4ed8; }
+  .badge-admin { background:#fef3c7; color:#92400e; }
+  .form-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:10px; }
+  .form-input, .form-select { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; outline:none; }
+  .form-input:focus, .form-select:focus { border-color:var(--accent); }
+  .sheet-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
+  .sheet-title { font-size:18px; font-weight:700; }
+  .hidden { display:none !important; }
+  .chart-bar { display:flex; align-items:flex-end; gap:6px; height:110px; padding:8px 0 20px; }
+  .bar { flex:1; background:var(--accent); border-radius:4px 4px 0 0; min-width:18px; position:relative; transition:height .4s ease; }
+  .bar.top-performer { box-shadow:0 0 0 3px #fbbf24, 0 4px 12px rgba(251,191,36,.4); z-index:2; }
+  .bar-label { position:absolute; bottom:-16px; left:50%; transform:translateX(-50%); font-size:9px; color:var(--muted); white-space:nowrap; }
+  .bar-value { position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:600; }
+  .bar-top-badge { position:absolute; top:-34px; left:50%; transform:translateX(-50%); background:#fbbf24; color:#92400e; font-size:9px; font-weight:700; padding:2px 6px; border-radius:10px; white-space:nowrap; }
+  .toast { position:fixed; bottom:20px; right:20px; background:#111827; color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; box-shadow:0 10px 30px rgba(0,0,0,.2); transform:translateY(80px); opacity:0; transition:all .3s; z-index:200; }
+  .toast.show { transform:translateY(0); opacity:1; }
+  .leaderboard-row { display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--border); }
+  .leaderboard-row:last-child { border-bottom:none; }
+  .rank { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; background:#f3f4f6; }
+  .rank-1 { background:#fef3c7; color:#92400e; }
+  .rank-2 { background:#e5e7eb; color:#374151; }
+  .rank-3 { background:#ffedd5; color:#9a3412; }
+  .filter-row { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
+  .search-box { padding:8px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px; min-width:200px; outline:none; }
+  .search-box:focus { border-color:var(--accent); }
+  .date-badge { background:#dbeafe; color:#2563eb; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; }
+  .export-btn { background:#10b981; color:#fff; }
+  .export-btn:hover { background:#059669; }
+  .action-btns { display:flex; gap:6px; }
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:center; justify-content:center; z-index:100; }
+  .modal-overlay.active { display:flex; }
+  .modal { background:#fff; border-radius:16px; width:90%; max-width:520px; box-shadow:0 20px 60px rgba(0,0,0,.2); overflow:hidden; }
+  .modal-header { padding:18px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .modal-body { padding:20px 22px; }
+  .modal-footer { padding:14px 22px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+  .form-group { margin-bottom:14px; }
+  .form-label { display:block; font-size:12px; color:var(--muted); font-weight:600; margin-bottom:4px; }
+  .form-textarea { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; outline:none; resize:vertical; min-height:60px; }
+  .form-textarea:focus { border-color:var(--accent); }
+  .read-only-banner { background:#fef3c7; color:#92400e; padding:10px 16px; border-radius:8px; font-size:13px; font-weight:600; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .user-bar { display:flex; align-items:center; gap:10px; padding:12px 20px; border-top:1px solid #374151; margin-top:auto; }
+  .user-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; color:#fff; }
+  .user-info { flex:1; }
+  .user-name { font-weight:600; font-size:13px; }
+  .user-role { font-size:11px; color:#9ca3af; }
+  .logout-btn { font-size:11px; color:#9ca3af; cursor:pointer; }
+  .logout-btn:hover { color:#fff; }
+  .login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:linear-gradient(135deg,#1e3a5f 0%,#0f172a 100%); }
+  .login-box { background:#fff; border-radius:16px; padding:40px; width:90%; max-width:400px; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+  .login-title { font-size:24px; font-weight:700; text-align:center; margin-bottom:8px; color:#1f2937; }
+  .login-sub { text-align:center; color:var(--muted); font-size:14px; margin-bottom:28px; }
+  .login-input { width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-size:14px; margin-bottom:14px; outline:none; }
+  .login-input:focus { border-color:var(--accent); }
+  .login-btn { width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; }
+  .login-btn:hover { background:#1d4ed8; }
+  .member-select { width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-size:14px; margin-bottom:14px; outline:none; background:#fff; }
+  .pin-input { width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-size:14px; margin-bottom:14px; outline:none; text-align:center; letter-spacing:8px; font-size:18px; }
+  .pin-hint { text-align:center; font-size:12px; color:var(--muted); margin-bottom:20px; }
+  .crumb { font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .crumb span { cursor:pointer; color:var(--accent); }
+  .crumb span:hover { text-decoration:underline; }
+  .sync-status { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
+  .sync-dot { width:8px; height:8px; border-radius:50%; background:var(--success); animation:pulse 2s infinite; }
+  .sync-dot.offline { background:var(--danger); animation:none; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+  .loading-overlay { position:fixed; inset:0; background:rgba(255,255,255,.8); display:flex; align-items:center; justify-content:center; z-index:300; }
+  .loading-overlay.hidden { display:none; }
+  .spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .admin-badge { background:linear-gradient(135deg,#fbbf24,#d97706); color:#fff; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700; margin-left:4px; }
+  .admin-nav { background:linear-gradient(135deg,#fbbf24 0%,#d97706 100%) !important; border-left-color:#fbbf24 !important; }
+  @media (max-width: 768px) { .sidebar { width: 60px; } .sidebar-title, .nav-item div div:last-child, .user-info, .logout-btn { display:none; } .nav-item { padding:12px; justify-content:center; } .main { padding:12px; } .user-bar { justify-content:center; padding:8px; } }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <div class="login-title">&#128203; Daily Task Tracker</div>
+    <div class="login-sub">Select your name and enter your PIN to access your sheet</div>
+    <select class="member-select" id="loginMember">
+      <option value="">-- Select your name --</option>
+    </select>
+    <input type="password" class="pin-input" id="loginPin" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="4">
+    <div class="pin-hint">Default PIN for all users: <strong>1234</strong></div>
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted);">
+      <span style="cursor:pointer;color:var(--accent);" onclick="adminLogin()">Admin Login</span>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="modal-overlay" id="adminModal" onclick="if(event.target===this)closeAdminModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-size:16px;">&#128274; Admin Login</h3>
+      <button class="btn btn-sm" style="background:#f3f4f6;" onclick="closeAdminModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Admin Password</label>
+        <input type="password" class="form-input" id="adminPassword" placeholder="Enter admin password">
+      </div>
+      <div style="font-size:12px;color:var(--muted);">Default: <strong>admin123</strong></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeAdminModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doAdminLogin()">Login as Admin</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appScreen" class="layout hidden">
+  <div class="sidebar">
+    <div class="sidebar-title">&#128203; Task Tracker</div>
+    <div class="nav-item active" onclick="navTo('summary')" id="nav-summary">
+      <div class="nav-icon" style="background:#374151;">&#128202;</div>
+      <div><div style="font-weight:600;">Live Summary</div><div style="font-size:11px;color:#9ca3af">Dashboard</div></div>
+    </div>
+    <div class="sidebar-title" style="margin-top:20px;">Team Sheets</div>
+    <div id="memberNav"></div>
+    <div style="flex:1;"></div>
+    <div class="user-bar">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">Guest</div>
+        <div class="user-role" id="userRole">View Only</div>
+      </div>
+      <div class="logout-btn" onclick="doLogout()">Logout</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- SUMMARY DASHBOARD -->
+    <div id="view-summary">
+      <div class="header">
+        <div>
+          <h2>Live Performance Report</h2>
+          <div style="color:var(--muted);font-size:13px;margin-top:2px;">
+            Auto-updates as team members log cases &mdash; <span class="date-badge" id="todayDate"></span>
+            <span class="sync-status" id="syncStatus" style="margin-left:12px;"><span class="sync-dot" id="syncDot"></span><span id="syncText">Connected</span></span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span id="lastUpdated" style="font-size:12px;color:var(--muted);"></span>
+          <button class="btn export-btn" onclick="exportCSV()">&#128229; Export CSV</button>
+        </div>
+      </div>
+
+      <div class="grid-4">
+        <div class="card">
+          <div class="card-title">Total Cases Logged</div>
+          <div class="card-value" id="sumTotal">0</div>
+          <div class="card-sub">Across all team members</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Completed</div>
+          <div class="card-value" id="sumDone" style="color:var(--success)">0</div>
+          <div class="card-sub" id="sumDoneRate">0% rate</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Pending / Overdue</div>
+          <div class="card-value" id="sumOpen" style="color:var(--danger)">0</div>
+          <div class="card-sub">Needs attention</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Total Call Minutes</div>
+          <div class="card-value" id="sumCalls">0</div>
+          <div class="card-sub">Time spent on calls</div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2fr 1fr; gap:16px; margin-bottom:20px;">
+        <div class="card">
+          <div class="card-title">Cases Per Day &mdash; <span style="color:var(--success);font-size:11px;">&#11088; Top Performer highlighted</span></div>
+          <div class="chart-bar" id="trendChart"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">&#127942; Leaderboard</div>
+          <div id="leaderboard"></div>
+        </div>
+      </div>
+
+      <div class="section-title">Team Performance Cards</div>
+      <div class="member-grid" id="summaryCards"></div>
+
+      <div class="section-title">All Cases</div>
+      <div class="filter-row">
+        <input type="text" class="search-box" id="caseSearch" placeholder="Search cases, comments, IDs..." oninput="renderAllCases()">
+        <input type="date" class="search-box" style="width:150px;" id="filterDateFrom" onchange="renderAllCases()">
+        <input type="date" class="search-box" style="width:150px;" id="filterDateTo" onchange="renderAllCases()">
+        <select class="form-select" style="width:140px;" id="filterStatus" onchange="renderAllCases()">
+          <option value="">All Status</option>
+          <option value="Done">Done</option>
+          <option value="Pending">Pending</option>
+          <option value="Overdue">Overdue</option>
+        </select>
+        <select class="form-select" style="width:160px;" id="filterMember" onchange="renderAllCases()">
+          <option value="">All Members</option>
+        </select>
+        <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Member</th><th>Bucket</th><th>Email</th><th>WhatsApp</th><th>Calls</th><th>Status</th><th>Comments</th></tr></thead>
+          <tbody id="allCasesTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MEMBER SHEET VIEW -->
+    <div id="view-member" class="hidden">
+      <div class="crumb" id="memberCrumb"><span onclick="navTo('summary')">&#8592; Summary</span> / <span id="crumbMemberName"></span></div>
+      <div class="sheet-header">
+        <div>
+          <div class="sheet-title" id="sheetTitle">Member Sheet</div>
+          <div style="color:var(--muted);font-size:13px;margin-top:2px;" id="sheetSubtitle"></div>
+        </div>
+        <div style="display:flex;gap:8px;" id="sheetActions">
+          <button class="btn btn-primary" onclick="openAddCase()">+ Add Case</button>
+          <button class="btn btn-sm" style="background:#f3f4f6;" onclick="navTo('summary')">&#8592; Back</button>
+        </div>
+      </div>
+
+      <div id="readOnlyBanner" class="read-only-banner hidden">&#128274; You are viewing <strong id="viewingMemberName"></strong>'s sheet. You can only edit your own cases.</div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Quick Stats</div>
+        <div style="display:flex;gap:30px;flex-wrap:wrap;">
+          <div><div style="font-size:22px;font-weight:700;" id="memTotal">0</div><div style="font-size:11px;color:var(--muted);">Total Cases</div></div>
+          <div><div style="font-size:22px;font-weight:700;color:var(--success);" id="memDone">0</div><div style="font-size:11px;color:var(--muted);">Done</div></div>
+          <div><div style="font-size:22px;font-weight:700;color:var(--warning);" id="memPending">0</div><div style="font-size:11px;color:var(--muted);">Pending</div></div>
+          <div><div style="font-size:22px;font-weight:700;color:var(--danger);" id="memOverdue">0</div><div style="font-size:11px;color:var(--muted);">Overdue</div></div>
+          <div><div style="font-size:22px;font-weight:700;" id="memCalls">0</div><div style="font-size:11px;color:var(--muted);">Call Mins</div></div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Date</th><th>Bucket ID</th><th>Email Ref</th><th>WhatsApp</th><th>Calls</th><th>Status</th><th>Comments</th><th id="actionsHeader">Actions</th></tr></thead>
+          <tbody id="memberTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT CASE MODAL -->
+<div class="modal-overlay" id="caseModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-size:16px;" id="modalTitle">Add New Case</h3>
+      <button class="btn btn-sm" style="background:#f3f4f6;" onclick="closeModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" class="form-input" id="cDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="cStatus"><option>Pending</option><option>Done</option><option>Overdue</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Bucket ID</label>
+          <input type="text" class="form-input" id="cBucket" placeholder="e.g. 1994493">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Call Time (min)</label>
+          <input type="number" class="form-input" id="cCalls" placeholder="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Email Ref</label>
+          <input type="text" class="form-input" id="cEmail" placeholder="e.g. 1989475">
+        </div>
+        <div class="form-group">
+          <label class="form-label">WhatsApp Ref</label>
+          <input type="text" class="form-input" id="cWhatsapp" placeholder="e.g. 1992416">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Comments</label>
+        <textarea class="form-textarea" id="cComments" placeholder="Notes about this case..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCase()" id="saveBtn">Save Case</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, push, update, remove, child, get } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+
+  // ===================== CONFIGURE THIS =====================
+  // Replace with your Firebase project config from Firebase Console
+  const firebaseConfig = {
+    apiKey: "AIzaSyB6IeXB9p7nzj7T1eoWuvt_x_WuoF0I5lk",
+    authDomain: "spg-daily-task-tracker.firebaseapp.com",
+    databaseURL: "https://spg-daily-task-tracker-default-rtdb.firebaseio.com",
+    projectId: "spg-daily-task-tracker",
+    storageBucket: "spg-daily-task-tracker.firebasestorage.app",
+    messagingSenderId: "687777399439",
+    appId: "1:687777399439:web:60944bb74bc905e397a6fa",
+    measurementId: "G-1D0JXB2GM2"
+  };
+  // =========================================================
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const casesRef = ref(db, 'cases');
+  const membersRef = ref(db, 'members');
+
+  const members = [
+    {id:'matlhogonolo',name:'Matlhogonolo',color:'#2563eb',pin:'1234',role:'agent'},
+    {id:'oteng',name:'Oteng',color:'#7c3aed',pin:'1234',role:'agent'},
+    {id:'boineelo',name:'Boineelo',color:'#db2777',pin:'1234',role:'agent'},
+    {id:'lebone',name:'Lebone',color:'#059669',pin:'1234',role:'agent'},
+    {id:'oduetse',name:'Oduetse',color:'#0284c7',pin:'1234',role:'agent'},
+    {id:'lucky',name:'Lucky',color:'#ca8a04',pin:'1234',role:'agent'},
+    {id:'omphile',name:'Omphile',color:'#9333ea',pin:'1234',role:'agent'},
+    {id:'ditebogo',name:'Ditebogo',color:'#dc2626',pin:'1234',role:'agent'},
+    {id:'boingotlo',name:'Boingotlo',color:'#ea580c',pin:'1234',role:'agent'},
+    {id:'nzwadzi',name:'Nzwadzi',color:'#0891b2',pin:'1234',role:'agent'}
+  ];
+
+  let cases = [];
+  let currentUser = null;
+  let currentMember = null;
+  let editingId = null;
+  let isAdmin = false;
+  let dbMembers = [];
+
+  function showLoading(show) {
+    document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function updateSyncStatus(connected) {
+    const dot = document.getElementById('syncDot');
+    const text = document.getElementById('syncText');
+    if (connected) {
+      dot.classList.remove('offline');
+      text.textContent = 'Live sync';
+    } else {
+      dot.classList.add('offline');
+      text.textContent = 'Offline';
+    }
+  }
+
+  // Seed members to Firebase if not exists
+  async function seedMembers() {
+    const snapshot = await get(membersRef);
+    if (!snapshot.exists()) {
+      const membersObj = {};
+      members.forEach(m => { membersObj[m.id] = m; });
+      await set(membersRef, membersObj);
+    }
+  }
+
+  // Seed demo data if empty
+  async function seedDemoData() {
+    const snapshot = await get(casesRef);
+    if (!snapshot.exists()) {
+      const demoCases = [
+        {id:1,member:'matlhogonolo',date:'2026-06-24',bucket:'1994493',email:'',whatsapp:'',calls:15,status:'Done',comments:'Call with MR BATSHO & BOFINET'},
+        {id:2,member:'matlhogonolo',date:'2026-06-24',bucket:'1994481',email:'',whatsapp:'',calls:0,status:'Done',comments:'VLAN via app'},
+        {id:3,member:'matlhogonolo',date:'2026-06-24',bucket:'1994514',email:'',whatsapp:'',calls:0,status:'Overdue',comments:'RED LIGHT'},
+        {id:4,member:'matlhogonolo',date:'2026-06-24',bucket:'1994511',email:'',whatsapp:'',calls:0,status:'Overdue',comments:'RED LIGHT'},
+        {id:5,member:'matlhogonolo',date:'2026-06-24',bucket:'1994526',email:'',whatsapp:'',calls:0,status:'Pending',comments:''},
+        {id:6,member:'matlhogonolo',date:'2026-06-24',bucket:'1994502',email:'',whatsapp:'',calls:0,status:'Pending',comments:''},
+        {id:7,member:'matlhogonolo',date:'2026-06-24',bucket:'1994502',email:'1989475',whatsapp:'',calls:0,status:'Done',comments:''},
+        {id:8,member:'matlhogonolo',date:'2026-06-24',bucket:'',email:'',whatsapp:'1992416',calls:0,status:'Pending',comments:''},
+        {id:9,member:'matlhogonolo',date:'2026-06-24',bucket:'',email:'',whatsapp:'1989689',calls:0,status:'Done',comments:''},
+        {id:10,member:'matlhogonolo',date:'2026-06-24',bucket:'',email:'',whatsapp:'1988833',calls:0,status:'Pending',comments:''},
+        {id:11,member:'matlhogonolo',date:'2026-06-24',bucket:'',email:'',whatsapp:'1990839',calls:0,status:'Done',comments:''},
+        {id:12,member:'matlhogonolo',date:'2026-06-24',bucket:'',email:'',whatsapp:'',calls:8,status:'Done',comments:''},
+        {id:13,member:'matlhogonolo',date:'2026-06-24',bucket:'1994503',email:'',whatsapp:'',calls:0,status:'Overdue',comments:'CEASE'},
+        {id:14,member:'matlhogonolo',date:'2026-06-24',bucket:'',email:'',whatsapp:'1994885',calls:0,status:'Pending',comments:'service change'},
+        {id:15,member:'matlhogonolo',date:'2026-06-24',bucket:'',email:'',whatsapp:'1994376',calls:0,status:'Pending',comments:'service change'},
+        {id:16,member:'matlhogonolo',date:'2026-06-24',bucket:'1994798',email:'',whatsapp:'',calls:0,status:'Done',comments:'service change / dispatched to access'},
+        {id:17,member:'matlhogonolo',date:'2026-06-24',bucket:'1994830',email:'',whatsapp:'',calls:0,status:'Pending',comments:'Migration to fibre dispatched to access'},
+        {id:18,member:'oteng',date:'2026-06-25',bucket:'',email:'',whatsapp:'1990359',calls:0,status:'Overdue',comments:'RED LIGHT'},
+        {id:19,member:'oteng',date:'2026-06-25',bucket:'',email:'',whatsapp:'1994776',calls:0,status:'Overdue',comments:'RED LIGHT'},
+        {id:20,member:'oteng',date:'2026-06-25',bucket:'',email:'',whatsapp:'1994776',calls:0,status:'Overdue',comments:'RED LIGHT'},
+        {id:21,member:'oteng',date:'2026-06-25',bucket:'',email:'',whatsapp:'1994913',calls:0,status:'Overdue',comments:'RED LIGHT'},
+        {id:22,member:'oteng',date:'2026-06-25',bucket:'',email:'',whatsapp:'1995375',calls:12,status:'Done',comments:'RADIO CAMBIUM /'},
+      ];
+      const casesObj = {};
+      demoCases.forEach(c => { casesObj[c.id] = c; });
+      await set(casesRef, casesObj);
+    }
+  }
+
+  // Real-time listener
+  onValue(casesRef, (snapshot) => {
+    const data = snapshot.val();
+    cases = data ? Object.values(data) : [];
+    updateSyncStatus(true);
+    refreshAll();
+  }, (error) => {
+    console.error('Firebase error:', error);
+    updateSyncStatus(false);
+    showToast('Connection error - working offline');
+  });
+
+  onValue(membersRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      dbMembers = Object.values(data);
+    }
+  });
+
+  // LOGIN SYSTEM
+  function initLogin() {
+    const sel = document.getElementById('loginMember');
+    members.forEach(m => {
+      sel.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+    });
+    const saved = localStorage.getItem('currentUser');
+    const savedAdmin = localStorage.getItem('isAdmin');
+    if (savedAdmin === 'true') {
+      isAdmin = true;
+      currentUser = { id: 'admin', name: 'Admin', color: '#fbbf24', role: 'admin' };
+      showApp();
+    } else if (saved) {
+      const user = members.find(u => u.id === saved);
+      if (user) { currentUser = user; showApp(); }
+    }
+  }
+
+  window.doLogin = function() {
+    const memberId = document.getElementById('loginMember').value;
+    const pin = document.getElementById('loginPin').value;
+    if (!memberId) { alert('Please select your name'); return; }
+    if (!pin) { alert('Please enter your PIN'); return; }
+    const user = members.find(m => m.id === memberId);
+    if (!user) { alert('User not found'); return; }
+    if (user.pin !== pin) { alert('Incorrect PIN. Default is 1234'); return; }
+    currentUser = user;
+    isAdmin = false;
+    localStorage.setItem('currentUser', user.id);
+    localStorage.removeItem('isAdmin');
+    showApp();
+    showToast('Welcome, ' + user.name + '!');
+  };
+
+  window.adminLogin = function() {
+    document.getElementById('adminModal').classList.add('active');
+    document.getElementById('adminPassword').value = '';
+    document.getElementById('adminPassword').focus();
+  };
+
+  window.closeAdminModal = function() {
+    document.getElementById('adminModal').classList.remove('active');
+  };
+
+  window.doAdminLogin = function() {
+    const pw = document.getElementById('adminPassword').value;
+    if (pw !== 'admin123') { alert('Incorrect admin password'); return; }
+    isAdmin = true;
+    currentUser = { id: 'admin', name: 'Admin', color: '#fbbf24', role: 'admin' };
+    localStorage.setItem('isAdmin', 'true');
+    localStorage.removeItem('currentUser');
+    closeAdminModal();
+    showApp();
+    showToast('Welcome, Admin!');
+  };
+
+  window.doLogout = function() {
+    currentUser = null;
+    isAdmin = false;
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('isAdmin');
+    document.getElementById('appScreen').classList.add('hidden');
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('loginPin').value = '';
+  };
+
+  function showApp() {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('appScreen').classList.remove('hidden');
+    document.getElementById('userAvatar').textContent = currentUser.name[0];
+    document.getElementById('userAvatar').style.background = currentUser.color;
+    document.getElementById('userName').textContent = currentUser.name;
+    document.getElementById('userRole').textContent = isAdmin ? 'Administrator' : 'Field Agent';
+    refreshAll();
+  }
+
+  function canEdit(memberId) {
+    if (isAdmin) return true;
+    return currentUser && currentUser.id === memberId;
+  }
+
+  function canView(memberId) {
+    if (isAdmin) return true;
+    return currentUser && currentUser.id === memberId;
+  }
+
+  // NAVIGATION
+  window.buildNav = function() {
+    const nav = document.getElementById('memberNav');
+    nav.innerHTML = '';
+    members.forEach(m => {
+      const count = cases.filter(c => c.member === m.id).length;
+      const isMe = currentUser && currentUser.id === m.id;
+      const isAdminView = isAdmin;
+      const div = document.createElement('div');
+      div.className = 'nav-item' + (isMe || isAdminView ? '' : ' locked');
+      div.id = 'nav-' + m.id;
+      div.onclick = () => { if (isMe || isAdminView) navTo(m.id); };
+      const badge = isAdminView ? '<span class="badge badge-admin">ADMIN</span>' : (isMe ? '<span class="badge badge-you">YOU</span>' : '');
+      const lockIcon = (!isMe && !isAdminView) ? '<span class="lock-icon">&#128065;</span>' : '';
+      div.innerHTML = `<div class="nav-icon" style="background:${m.color}20;color:${m.color};">${m.name[0]}</div><div style="flex:1;"><div style="font-weight:500;">${m.name} ${badge}</div><div style="font-size:11px;color:#9ca3af">${count} cases</div></div>${lockIcon}`;
+      nav.appendChild(div);
+    });
+  };
+
+  window.navTo = function(view) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    if (view === 'summary') {
+      document.getElementById('nav-summary').classList.add('active');
+      document.getElementById('view-summary').classList.remove('hidden');
+      document.getElementById('view-member').classList.add('hidden');
+      currentMember = null;
+    } else {
+      document.getElementById('nav-' + view).classList.add('active');
+      document.getElementById('view-summary').classList.add('hidden');
+      document.getElementById('view-member').classList.remove('hidden');
+      currentMember = view;
+      renderMemberSheet();
+    }
+  };
+
+  // RENDERING
+  function getMemberStats() {
+    return members.map(m => {
+      const mc = cases.filter(c => c.member === m.id);
+      const done = mc.filter(c => c.status === 'Done').length;
+      return { ...m, total: mc.length, done, pending: mc.filter(c => c.status === 'Pending').length, overdue: mc.filter(c => c.status === 'Overdue').length, calls: mc.reduce((s,c) => s + (parseInt(c.calls)||0), 0), rate: mc.length ? done / mc.length : 0 };
+    });
+  }
+
+  window.renderSummary = function() {
+    const total = cases.length;
+    const done = cases.filter(c => c.status === 'Done').length;
+    const open = cases.filter(c => c.status !== 'Done').length;
+    const calls = cases.reduce((s,c) => s + (parseInt(c.calls)||0), 0);
+    document.getElementById('sumTotal').textContent = total;
+    document.getElementById('sumDone').textContent = done;
+    document.getElementById('sumDoneRate').textContent = total ? Math.round(done/total*100) + '% completion rate' : '0%';
+    document.getElementById('sumOpen').textContent = open;
+    document.getElementById('sumCalls').textContent = calls + ' min';
+    document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const today = new Date();
+    const dayData = days.map((dayName, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - today.getDay() + i + 1);
+      const dateStr = d.toISOString().slice(0,10);
+      const dayCases = cases.filter(c => c.date === dateStr);
+      const counts = {};
+      members.forEach(m => counts[m.id] = dayCases.filter(c => c.member === m.id).length);
+      const topMember = members.reduce((best, m) => counts[m.id] > (counts[best.id]||0) ? m : best, members[0]);
+      return { day: dayName, count: dayCases.length, topMember: counts[topMember.id] > 0 ? topMember : null };
+    });
+
+    const chart = document.getElementById('trendChart');
+    chart.innerHTML = '';
+    const max = Math.max(...dayData.map(d => d.count), 1);
+    dayData.forEach((d, i) => {
+      const bar = document.createElement('div');
+      bar.className = 'bar' + (d.topMember ? ' top-performer' : '');
+      bar.style.height = (d.count/max*100) + '%';
+      bar.style.background = d.topMember ? d.topMember.color : '#e5e7eb';
+      let badge = d.topMember ? `<div class="bar-top-badge">&#11088; ${d.topMember.name}</div>` : '';
+      bar.innerHTML = `<div class="bar-value">${d.count}</div>${badge}<div class="bar-label">${d.day}</div>`;
+      chart.appendChild(bar);
+    });
+
+    const lb = document.getElementById('leaderboard');
+    lb.innerHTML = '';
+    const ranked = getMemberStats().sort((a,b) => b.rate - a.rate || b.total - a.total);
+    ranked.forEach((m,i) => {
+      const row = document.createElement('div'); row.className='leaderboard-row';
+      const isMe = currentUser && currentUser.id === m.id;
+      const badge = isAdmin ? '' : (isMe ? '<span class="badge badge-you">YOU</span>' : '');
+      row.innerHTML = `<div class="rank ${i<3?'rank-'+(i+1):''}">${i+1}</div><div class="avatar" style="width:32px;height:32px;font-size:12px;background:${m.color}">${m.name[0]}</div><div style="flex:1;"><div style="font-weight:600;font-size:13px;">${m.name} ${badge}</div><div style="font-size:11px;color:var(--muted);">${m.done}/${m.total} done &#8226; ${m.calls}m calls</div></div><div style="font-weight:700;font-size:14px;">${Math.round(m.rate*100)}%</div>`;
+      lb.appendChild(row);
+    });
+
+    const grid = document.getElementById('summaryCards');
+    grid.innerHTML = '';
+    ranked.forEach(m => {
+      const pct = m.total ? Math.round(m.done/m.total*100) : 0;
+      const isMe = currentUser && currentUser.id === m.id;
+      const badge = isAdmin ? (isAdmin ? '<span class="badge badge-admin">ADMIN</span>' : '') : (isMe ? '<span class="badge badge-you">YOU</span>' : '');
+      const card = document.createElement('div'); card.className='member-card';
+      card.onclick = () => navTo(m.id);
+      card.innerHTML = `<div class="member-header"><div class="avatar" style="background:${m.color}">${m.name[0]}</div><div><div style="font-weight:600;">${m.name} ${badge}</div><div style="font-size:11px;color:var(--muted);">${m.total} cases logged</div></div></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${pct>=80?'#059669':pct>=50?'#d97706':'#dc2626'}"></div></div><div class="stats-row"><div class="stat-box"><div class="stat-num">${m.total}</div><div class="stat-label">Total</div></div><div class="stat-box"><div class="stat-num" style="color:var(--success)">${m.done}</div><div class="stat-label">Done</div></div><div class="stat-box"><div class="stat-num" style="color:var(--warning)">${m.total-m.done}</div><div class="stat-label">Open</div></div><div class="stat-box"><div class="stat-num">${m.calls}</div><div class="stat-label">Calls</div></div></div>`;
+      grid.appendChild(card);
+    });
+
+    renderAllCases();
+  };
+
+  window.renderAllCases = function() {
+    const search = document.getElementById('caseSearch').value.toLowerCase();
+    const dateFrom = document.getElementById('filterDateFrom').value;
+    const dateTo = document.getElementById('filterDateTo').value;
+    const st = document.getElementById('filterStatus').value;
+    const mem = document.getElementById('filterMember').value;
+    const tbody = document.getElementById('allCasesTable');
+    tbody.innerHTML = '';
+    const filtered = [...cases].sort((a,b) => b.id - a.id).filter(c => {
+      const m = members.find(x => x.id === c.member);
+      const matchSearch = !search || [c.bucket, c.email, c.whatsapp, c.comments, m.name].some(x => (x||'').toString().toLowerCase().includes(search));
+      const matchDate = (!dateFrom || c.date >= dateFrom) && (!dateTo || c.date <= dateTo);
+      const matchStatus = !st || c.status === st;
+      const matchMem = !mem || c.member === mem;
+      return matchSearch && matchDate && matchStatus && matchMem;
+    });
+    filtered.forEach(c => {
+      const m = members.find(x => x.id === c.member);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${c.date}</td><td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${m.color};"></span>${m.name}</span></td><td>${c.bucket||'-'}</td><td>${c.email||'-'}</td><td>${c.whatsapp||'-'}</td><td>${c.calls?c.calls+' min':'-'}</td><td><span class="status status-${c.status.toLowerCase()}">${c.status}</span></td><td>${c.comments||'-'}</td>`;
+      tbody.appendChild(tr);
+    });
+    if (!filtered.length) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px;">No cases found</td></tr>';
+  };
+
+  window.renderMemberSheet = function() {
+    const m = members.find(x => x.id === currentMember);
+    const editable = canEdit(currentMember);
+    document.getElementById('sheetTitle').textContent = m.name + "'s Sheet";
+    document.getElementById('crumbMemberName').textContent = m.name;
+    document.getElementById('sheetSubtitle').textContent = editable ? 'Log your daily cases below' : (isAdmin ? 'Admin view - you can edit any case' : 'View-only access. You can only edit your own sheet.');
+    document.getElementById('viewingMemberName').textContent = m.name;
+
+    const banner = document.getElementById('readOnlyBanner');
+    if (editable) { banner.classList.add('hidden'); }
+    else { banner.classList.remove('hidden'); }
+
+    const actions = document.getElementById('sheetActions');
+    if (editable) {
+      actions.innerHTML = `<button class="btn btn-primary" onclick="openAddCase()">+ Add Case</button><button class="btn btn-sm" style="background:#f3f4f6;" onclick="navTo('summary')">&#8592; Back</button>`;
+    } else {
+      actions.innerHTML = `<button class="btn btn-sm" style="background:#f3f4f6;" onclick="navTo('summary')">&#8592; Back</button>`;
+    }
+
+    const mc = cases.filter(c => c.member === currentMember);
+    document.getElementById('memTotal').textContent = mc.length;
+    document.getElementById('memDone').textContent = mc.filter(c => c.status === 'Done').length;
+    document.getElementById('memPending').textContent = mc.filter(c => c.status === 'Pending').length;
+    document.getElementById('memOverdue').textContent = mc.filter(c => c.status === 'Overdue').length;
+    document.getElementById('memCalls').textContent = mc.reduce((s,c) => s + (parseInt(c.calls)||0), 0);
+
+    document.getElementById('actionsHeader').style.display = editable ? '' : 'none';
+
+    const tbody = document.getElementById('memberTable');
+    tbody.innerHTML = '';
+    [...mc].sort((a,b) => b.id - a.id).forEach((c,idx) => {
+      const tr = document.createElement('tr');
+      let actions = '';
+      if (editable) {
+        actions = `<td><div class="action-btns"><button class="btn btn-sm btn-edit" onclick="editCase(${c.id})">&#9999;&#65039;</button><button class="btn btn-sm btn-danger" onclick="deleteCase(${c.id})">&#128465;</button></div></td>`;
+      }
+      tr.innerHTML = `<td>${idx+1}</td><td>${c.date}</td><td>${c.bucket||'-'}</td><td>${c.email||'-'}</td><td>${c.whatsapp||'-'}</td><td>${c.calls?c.calls+' min':'-'}</td><td><span class="status status-${c.status.toLowerCase()}">${c.status}</span></td><td>${c.comments||'-'}</td>${actions}`;
+      tbody.appendChild(tr);
+    });
+    if (!mc.length) tbody.innerHTML = `<tr><td colspan="${editable?9:8}" style="text-align:center;color:var(--muted);padding:30px;">${editable ? 'No cases yet. Click "Add Case" to start logging.' : 'No cases logged yet.'}</td></tr>`;
+  };
+
+  window.openAddCase = function() {
+    if (!canEdit(currentMember)) { showToast('You can only edit your own sheet'); return; }
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'Add New Case';
+    document.getElementById('saveBtn').textContent = 'Save Case';
+    document.getElementById('caseModal').classList.add('active');
+    document.getElementById('cDate').value = new Date().toISOString().slice(0,10);
+    ['cBucket','cEmail','cWhatsapp','cCalls','cComments'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('cStatus').value = 'Pending';
+  };
+
+  window.editCase = function(id) {
+    const c = cases.find(x => x.id === id);
+    if (!c) return;
+    if (!canEdit(c.member)) { showToast('You can only edit your own cases'); return; }
+    editingId = id;
+    document.getElementById('modalTitle').textContent = 'Edit Case #' + id;
+    document.getElementById('saveBtn').textContent = 'Update Case';
+    document.getElementById('caseModal').classList.add('active');
+    document.getElementById('cDate').value = c.date;
+    document.getElementById('cBucket').value = c.bucket || '';
+    document.getElementById('cEmail').value = c.email || '';
+    document.getElementById('cWhatsapp').value = c.whatsapp || '';
+    document.getElementById('cCalls').value = c.calls || '';
+    document.getElementById('cStatus').value = c.status;
+    document.getElementById('cComments').value = c.comments || '';
+  };
+
+  window.closeModal = function() {
+    document.getElementById('caseModal').classList.remove('active');
+    editingId = null;
+  };
+
+  window.saveCase = async function() {
+    const targetMember = editingId ? cases.find(c=>c.id===editingId).member : currentMember;
+    if (!canEdit(targetMember)) { showToast('You can only edit your own cases'); return; }
+    const task = {
+      member: targetMember,
+      date: document.getElementById('cDate').value,
+      bucket: document.getElementById('cBucket').value,
+      email: document.getElementById('cEmail').value,
+      whatsapp: document.getElementById('cWhatsapp').value,
+      calls: parseInt(document.getElementById('cCalls').value) || 0,
+      status: document.getElementById('cStatus').value,
+      comments: document.getElementById('cComments').value
+    };
+    if (editingId) {
+      await update(ref(db, 'cases/' + editingId), task);
+      showToast('Case updated!');
+    } else {
+      const newId = cases.length ? Math.max(...cases.map(c=>c.id)) + 1 : 1;
+      await set(ref(db, 'cases/' + newId), { ...task, id: newId });
+      showToast('Case saved! Summary updated.');
+    }
+    closeModal();
+  };
+
+  window.deleteCase = async function(id) {
+    const c = cases.find(x => x.id === id);
+    if (!canEdit(c.member)) { showToast('You can only delete your own cases'); return; }
+    if (!confirm('Delete this case?')) return;
+    await remove(ref(db, 'cases/' + id));
+    showToast('Case deleted.');
+  };
+
+  window.clearFilters = function() {
+    document.getElementById('caseSearch').value = '';
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterMember').value = '';
+    renderAllCases();
+  };
+
+  window.exportCSV = function() {
+    const rows = [['Date','Member','Bucket','Email','WhatsApp','Calls','Status','Comments']];
+    cases.forEach(c => { const m = members.find(x=>x.id===c.member); rows.push([c.date,m.name,c.bucket,c.email,c.whatsapp,c.calls,c.status,c.comments]); });
+    const csv = rows.map(r => r.map(x => '"'+(x||'')+'"').join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'team_report_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+    showToast('Report exported to CSV');
+  };
+
+  window.refreshAll = function() {
+    buildNav();
+    renderSummary();
+    if (currentMember) renderMemberSheet();
+  };
+
+  // Populate member filter
+  const fmem = document.getElementById('filterMember');
+  members.forEach(m => fmem.innerHTML += `<option value="${m.id}">${m.name}</option>`);
+
+  // Initialize
+  showLoading(true);
+  seedMembers().then(() => seedDemoData()).then(() => {
+    showLoading(false);
+    initLogin();
+  }).catch(err => {
+    showLoading(false);
+    console.error('Init error:', err);
+    showToast('Error initializing. Check Firebase config.');
+    initLogin();
+  });
+</script>
+</body>
+</html>
