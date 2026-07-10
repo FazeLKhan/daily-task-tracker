@@ -177,6 +177,30 @@
   </div>
 </div>
 
+<!-- SET PIN MODAL (First-time login) -->
+<div class="modal-overlay" id="setPinModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-size:16px;">&#128274; Set Your PIN</h3>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">This is your first login. Create a 4-digit PIN to secure your account.</p>
+      <div class="form-group">
+        <label class="form-label">New PIN (4 digits)</label>
+        <input type="password" class="pin-input" id="newPin" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="4" style="margin-bottom:10px;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm PIN</label>
+        <input type="password" class="pin-input" id="confirmPin" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="4">
+      </div>
+      <div id="pinError" style="color:var(--danger);font-size:12px;margin-top:8px;display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveNewPin()">Save PIN</button>
+    </div>
+  </div>
+</div>
+
 <!-- MAIN APP -->
 <div id="appScreen" class="layout hidden">
   <div class="sidebar">
@@ -194,7 +218,10 @@
         <div class="user-name" id="userName">Guest</div>
         <div class="user-role" id="userRole">View Only</div>
       </div>
-      <div class="logout-btn" onclick="doLogout()">Logout</div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+        <div class="logout-btn" onclick="openChangePin()" style="font-size:10px;">Change PIN</div>
+        <div class="logout-btn" onclick="doLogout()">Logout</div>
+      </div>
     </div>
   </div>
 
@@ -206,7 +233,7 @@
           <h2>Live Performance Report</h2>
           <div style="color:var(--muted);font-size:13px;margin-top:2px;">
             Auto-updates as team members log cases &mdash; <span class="date-badge" id="todayDate"></span>
-            <span class="sync-status" id="syncStatus" style="margin-left:12px;"><span class="sync-dot" id="syncDot"></span><span id="syncText">Connected</span></span>
+            <span class="sync-status" id="syncStatus" style="margin-left:12px;"><span class="sync-dot" id="syncDot"></span><span id="syncText">Connecting...</span></span>
           </div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -255,8 +282,8 @@
       <div class="section-title">All Cases</div>
       <div class="filter-row">
         <input type="text" class="search-box" id="caseSearch" placeholder="Search cases, comments, IDs..." oninput="renderAllCases()">
-        <input type="date" class="search-box" style="width:150px;" id="filterDateFrom" onchange="renderAllCases()">
-        <input type="date" class="search-box" style="width:150px;" id="filterDateTo" onchange="renderAllCases()">
+        <input type="date" class="search-box" style="width:150px;" id="filterDateFrom" onchange="renderAllCases()" value="2026-07-10">
+        <input type="date" class="search-box" style="width:150px;" id="filterDateTo" onchange="renderAllCases()" value="2026-07-10">
         <select class="form-select" style="width:140px;" id="filterStatus" onchange="renderAllCases()">
           <option value="">All Status</option>
           <option value="Done">Done</option>
@@ -309,6 +336,35 @@
           <tbody id="memberTable"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PIN MODAL -->
+<div class="modal-overlay" id="changePinModal" onclick="if(event.target===this)closeChangePinModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-size:16px;">&#128274; Change Your PIN</h3>
+      <button class="btn btn-sm" style="background:#f3f4f6;" onclick="closeChangePinModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Current PIN</label>
+        <input type="password" class="pin-input" id="currentPinCheck" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="4" style="margin-bottom:10px;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">New PIN (4 digits)</label>
+        <input type="password" class="pin-input" id="changeNewPin" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="4" style="margin-bottom:10px;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm New PIN</label>
+        <input type="password" class="pin-input" id="changeConfirmPin" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="4">
+      </div>
+      <div id="changePinError" style="color:var(--danger);font-size:12px;margin-top:8px;display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeChangePinModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="updatePin()">Update PIN</button>
     </div>
   </div>
 </div>
@@ -395,7 +451,7 @@
     {id:'boineelo',name:'Boineelo',color:'#db2777',pin:'1234',role:'agent'},
     {id:'lebone',name:'Lebone',color:'#059669',pin:'1234',role:'agent'},
     {id:'oduetse',name:'Oduetse',color:'#0284c7',pin:'1234',role:'agent'},
-    {id:'Letsine',name:'Letsine',color:'#ca8a04',pin:'1234',role:'agent'},
+    {id:'lucky',name:'Lucky',color:'#ca8a04',pin:'1234',role:'agent'},
     {id:'omphile',name:'Omphile',color:'#9333ea',pin:'1234',role:'agent'},
     {id:'ditebogo',name:'Ditebogo',color:'#dc2626',pin:'1234',role:'agent'},
     {id:'boingotlo',name:'Boingotlo',color:'#ea580c',pin:'1234',role:'agent'},
@@ -476,17 +532,26 @@
     }
   }
 
-  // Real-time listener
-  onValue(casesRef, (snapshot) => {
-    const data = snapshot.val();
-    cases = data ? Object.values(data) : [];
-    updateSyncStatus(true);
-    refreshAll();
-  }, (error) => {
-    console.error('Firebase error:', error);
-    updateSyncStatus(false);
-    showToast('Connection error - working offline');
-  });
+  // Real-time listener - FIXED: setup as function, called after seeding
+  function setupRealtimeListener() {
+    onValue(casesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        cases = Object.values(data);
+      } else {
+        cases = [];
+      }
+      updateSyncStatus(true);
+      // Only refresh if user is logged in (app is visible)
+      if (currentUser && document.getElementById('appScreen').classList.contains('hidden') === false) {
+        refreshAll();
+      }
+    }, (error) => {
+      console.error('Firebase sync error:', error);
+      updateSyncStatus(false);
+      showToast('Connection lost - check internet');
+    });
+  }
 
   onValue(membersRef, (snapshot) => {
     const data = snapshot.val();
@@ -513,20 +578,72 @@
     }
   }
 
-  window.doLogin = function() {
+  window.doLogin = async function() {
     const memberId = document.getElementById('loginMember').value;
     const pin = document.getElementById('loginPin').value;
     if (!memberId) { alert('Please select your name'); return; }
     if (!pin) { alert('Please enter your PIN'); return; }
+
     const user = members.find(m => m.id === memberId);
     if (!user) { alert('User not found'); return; }
-    if (user.pin !== pin) { alert('Incorrect PIN. Default is 1234'); return; }
+
+    // Check Firebase for custom PIN
+    const pinSnapshot = await get(ref(db, 'pins/' + memberId));
+    const customPin = pinSnapshot.exists() ? pinSnapshot.val() : null;
+
+    // If no custom PIN set yet, default is 1234
+    const expectedPin = customPin || '1234';
+
+    if (pin !== expectedPin) { 
+      alert('Incorrect PIN.' + (customPin ? '' : ' Default is 1234')); 
+      return; 
+    }
+
     currentUser = user;
     isAdmin = false;
     localStorage.setItem('currentUser', user.id);
     localStorage.removeItem('isAdmin');
+
+    // If no custom PIN exists, prompt to create one
+    if (!customPin) {
+      document.getElementById('setPinModal').classList.add('active');
+      document.getElementById('newPin').value = '';
+      document.getElementById('confirmPin').value = '';
+      document.getElementById('pinError').style.display = 'none';
+      document.getElementById('newPin').focus();
+    } else {
+      showApp();
+      showToast('Welcome, ' + user.name + '!');
+    }
+  };
+
+  window.saveNewPin = async function() {
+    const newPin = document.getElementById('newPin').value;
+    const confirmPin = document.getElementById('confirmPin').value;
+    const errorDiv = document.getElementById('pinError');
+
+    if (!newPin || newPin.length !== 4) {
+      errorDiv.textContent = 'PIN must be exactly 4 digits';
+      errorDiv.style.display = 'block';
+      return;
+    }
+    if (newPin !== confirmPin) {
+      errorDiv.textContent = 'PINs do not match';
+      errorDiv.style.display = 'block';
+      return;
+    }
+    if (!/^\d{4}$/.test(newPin)) {
+      errorDiv.textContent = 'PIN must be 4 numbers only';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    // Save to Firebase
+    await set(ref(db, 'pins/' + currentUser.id), newPin);
+
+    document.getElementById('setPinModal').classList.remove('active');
     showApp();
-    showToast('Welcome, ' + user.name + '!');
+    showToast('PIN set! Welcome, ' + currentUser.name + '!');
   };
 
   window.adminLogin = function() {
@@ -569,6 +686,8 @@
     document.getElementById('userName').textContent = currentUser.name;
     document.getElementById('userRole').textContent = isAdmin ? 'Administrator' : 'Field Agent';
     refreshAll();
+    // Apply today's date filter on initial load
+    setTimeout(() => renderAllCases(), 100);
   }
 
   function canEdit(memberId) {
@@ -790,6 +909,57 @@
     editingId = null;
   };
 
+  window.openChangePin = function() {
+    document.getElementById('changePinModal').classList.add('active');
+    document.getElementById('currentPinCheck').value = '';
+    document.getElementById('changeNewPin').value = '';
+    document.getElementById('changeConfirmPin').value = '';
+    document.getElementById('changePinError').style.display = 'none';
+    document.getElementById('currentPinCheck').focus();
+  };
+
+  window.closeChangePinModal = function() {
+    document.getElementById('changePinModal').classList.remove('active');
+  };
+
+  window.updatePin = async function() {
+    const currentPin = document.getElementById('currentPinCheck').value;
+    const newPin = document.getElementById('changeNewPin').value;
+    const confirmPin = document.getElementById('changeConfirmPin').value;
+    const errorDiv = document.getElementById('changePinError');
+
+    // Verify current PIN from Firebase
+    const pinSnapshot = await get(ref(db, 'pins/' + currentUser.id));
+    const storedPin = pinSnapshot.exists() ? pinSnapshot.val() : '1234';
+
+    if (currentPin !== storedPin) {
+      errorDiv.textContent = 'Current PIN is incorrect';
+      errorDiv.style.display = 'block';
+      return;
+    }
+    if (!newPin || newPin.length !== 4) {
+      errorDiv.textContent = 'New PIN must be exactly 4 digits';
+      errorDiv.style.display = 'block';
+      return;
+    }
+    if (newPin !== confirmPin) {
+      errorDiv.textContent = 'New PINs do not match';
+      errorDiv.style.display = 'block';
+      return;
+    }
+    if (!/^\d{4}$/.test(newPin)) {
+      errorDiv.textContent = 'PIN must be 4 numbers only';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    // Save new PIN to Firebase
+    await set(ref(db, 'pins/' + currentUser.id), newPin);
+
+    closeChangePinModal();
+    showToast('PIN updated successfully!');
+  };
+
   window.saveCase = async function() {
     const targetMember = editingId ? cases.find(c=>c.id===editingId).member : currentMember;
     if (!canEdit(targetMember)) { showToast('You can only edit your own cases'); return; }
@@ -832,13 +1002,51 @@
   };
 
   window.exportCSV = function() {
+    // Get current filter values
+    const search = document.getElementById('caseSearch').value.toLowerCase();
+    const dateFrom = document.getElementById('filterDateFrom').value;
+    const dateTo = document.getElementById('filterDateTo').value;
+    const st = document.getElementById('filterStatus').value;
+    const mem = document.getElementById('filterMember').value;
+
+    // Filter cases same as the table display
+    const filtered = [...cases].sort((a,b) => b.id - a.id).filter(c => {
+      const m = members.find(x => x.id === c.member);
+      const matchSearch = !search || [c.bucket, c.email, c.whatsapp, c.comments, m.name].some(x => (x||'').toString().toLowerCase().includes(search));
+      const matchDate = (!dateFrom || c.date >= dateFrom) && (!dateTo || c.date <= dateTo);
+      const matchStatus = !st || c.status === st;
+      const matchMem = !mem || c.member === mem;
+      return matchSearch && matchDate && matchStatus && matchMem;
+    });
+
+    if (filtered.length === 0) {
+      showToast('No cases to export for current filters');
+      return;
+    }
+
     const rows = [['Date','Member','Bucket','Email','WhatsApp','Calls','Status','Comments']];
-    cases.forEach(c => { const m = members.find(x=>x.id===c.member); rows.push([c.date,m.name,c.bucket,c.email,c.whatsapp,c.calls,c.status,c.comments]); });
+    filtered.forEach(c => { const m = members.find(x=>x.id===c.member); rows.push([c.date,m.name,c.bucket,c.email,c.whatsapp,c.calls,c.status,c.comments]); });
     const csv = rows.map(r => r.map(x => '"'+(x||'')+'"').join(',')).join('\n');
     const blob = new Blob([csv], {type:'text/csv'});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'team_report_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
-    showToast('Report exported to CSV');
+
+    // Build filename based on filters
+    let filename = 'team_report';
+    if (dateFrom && dateTo && dateFrom === dateTo) {
+      filename = 'report_' + dateFrom;
+    } else if (dateFrom || dateTo) {
+      filename = 'report_' + (dateFrom || 'start') + '_to_' + (dateTo || 'end');
+    } else {
+      filename = 'team_report_' + new Date().toISOString().slice(0,10);
+    }
+    if (mem) {
+      const memberName = members.find(x => x.id === mem)?.name || mem;
+      filename += '_' + memberName;
+    }
+    filename += '.csv';
+
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+    showToast('Exported ' + filtered.length + ' cases to CSV');
   };
 
   window.refreshAll = function() {
@@ -854,6 +1062,7 @@
   // Initialize
   showLoading(true);
   seedMembers().then(() => seedDemoData()).then(() => {
+    setupRealtimeListener();
     showLoading(false);
     initLogin();
   }).catch(err => {
